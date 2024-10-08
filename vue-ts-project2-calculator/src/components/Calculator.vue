@@ -1,5 +1,5 @@
 <template>
-  <div class="calculator">
+  <div class="calculator" @keydown="handleKeydown" tabindex="0">
     <div class="display">{{ displayValue }}</div>
     <div class="history">
       <div v-for="(entry, index) in history" :key="index" class="history-entry">
@@ -11,95 +11,105 @@
       <button @click="appendNumber('7')">7</button>
       <button @click="appendNumber('8')">8</button>
       <button @click="appendNumber('9')">9</button>
-      <button @click="chooseOperation('/')">/</button>
+      <button @click="appendOperation('/')">/</button>
       <button @click="appendNumber('4')">4</button>
       <button @click="appendNumber('5')">5</button>
       <button @click="appendNumber('6')">6</button>
-      <button @click="chooseOperation('*')">*</button>
+      <button @click="appendOperation('*')">*</button>
       <button @click="appendNumber('1')">1</button>
       <button @click="appendNumber('2')">2</button>
       <button @click="appendNumber('3')">3</button>
-      <button @click="chooseOperation('-')">-</button>
+      <button @click="appendOperation('-')">-</button>
       <button @click="appendNumber('0')">0</button>
       <button @click="appendNumber('.')">.</button>
       <button @click="compute">=</button>
-      <button @click="chooseOperation('+')">+</button>
+      <button @click="appendOperation('+')">+</button>
+      <button @click="appendOperation('^')">^</button>
+      <button @click="appendOperation('√')">√</button>
+      <button @click="appendOperation('(')">(</button>
+      <button @click="appendOperation(')')">)</button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, onMounted } from 'vue';
 
 export default defineComponent({
   name: 'Calculator',
   setup() {
     const displayValue = ref('0');
-    const currentOperand = ref('');
-    const previousOperand = ref('');
-    const operation = ref<string | null>(null);
-    const history = ref<string[]>([]);
+    const expression = ref('');
 
     const clear = () => {
       displayValue.value = '0';
-      currentOperand.value = '';
-      previousOperand.value = '';
-      operation.value = null;
-      history.value = [];
+      expression.value = '';
     };
 
     const appendNumber = (number: string) => {
-      if (number === '.' && currentOperand.value.includes('.')) return;
-      currentOperand.value = currentOperand.value.toString() + number.toString();
-      displayValue.value = currentOperand.value;
+      if (number === '.' && expression.value.slice(-1) === '.') return;
+      expression.value += number;
+      displayValue.value = expression.value;
     };
 
-    const chooseOperation = (op: string) => {
-      if (currentOperand.value === '') return;
-      if (previousOperand.value !== '') {
-        compute();
+    const appendOperation = (op: string) => {
+      if (op === '-' && (expression.value === '' || /[\+\-\*\/\(\^√]$/.test(expression.value))) {
+        expression.value += '-';
+        displayValue.value = expression.value;
+        return;
       }
-      operation.value = op;
-      previousOperand.value = currentOperand.value;
-      currentOperand.value = '';
-      history.value.push(`${previousOperand.value} ${operation.value}`);
+      if (op === '(' && /[\d\)]$/.test(expression.value)) {
+        expression.value += '*(';
+      } else if (op === ')' && /[\+\-\*\/\(\^√]$/.test(expression.value)) {
+        return;
+      } else if (/[\+\-\*\/\(\^√]$/.test(expression.value) && op !== '(') {
+        return;
+      } else {
+        expression.value += op;
+      }
+      displayValue.value = expression.value;
     };
 
     const compute = () => {
-      let computation;
-      const prev = parseFloat(previousOperand.value);
-      const current = parseFloat(currentOperand.value);
-      if (isNaN(prev) || isNaN(current)) return;
-      switch (operation.value) {
-        case '+':
-          computation = prev + current;
-          break;
-        case '-':
-          computation = prev - current;
-          break;
-        case '*':
-          computation = prev * current;
-          break;
-        case '/':
-          computation = prev / current;
-          break;
-        default:
-          return;
+      try {
+        const result = eval(expression.value.replace(/√/g, 'Math.sqrt').replace(/\^/g, '**'));
+        displayValue.value = result.toString();
+        expression.value = result.toString();
+      } catch (e) {
+        displayValue.value = 'Error';
+        expression.value = '';
       }
-      currentOperand.value = computation.toString();
-      operation.value = null;
-      previousOperand.value = '';
-      displayValue.value = currentOperand.value;
-      history.value.push(`= ${currentOperand.value}`);
     };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      const key = event.key;
+      if (!isNaN(Number(key))) {
+        appendNumber(key);
+      } else if (key === '.') {
+        appendNumber(key);
+      } else if (key === '+' || key === '-' || key === '*' || key === '/' || key === '^' || key === '√' || key === '(' || key === ')') {
+        appendOperation(key);
+      } else if (key === 'Enter' || key === '=') {
+        compute();
+      } else if (key === 'Backspace') {
+        clear();
+      }
+    };
+
+    onMounted(() => {
+      const calculatorElement = document.querySelector('.calculator');
+      if (calculatorElement) {
+        calculatorElement.focus();
+      }
+    });
 
     return {
       displayValue,
       clear,
       appendNumber,
-      chooseOperation,
+      appendOperation,
       compute,
-      history,
+      handleKeydown,
     };
   },
 });
@@ -111,6 +121,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   margin-top: 50px;
+  outline: none;
 }
 
 .display {
