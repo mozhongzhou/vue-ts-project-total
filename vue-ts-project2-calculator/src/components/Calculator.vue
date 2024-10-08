@@ -1,6 +1,11 @@
 <template>
   <div class="calculator">
     <div class="display">{{ displayValue }}</div>
+    <div class="history">
+      <div v-for="(entry, index) in history" :key="index" class="history-entry">
+        {{ entry }}
+      </div>
+    </div>
     <div class="buttons">
       <button @click="clear">C</button>
       <button @click="appendNumber('7')">7</button>
@@ -33,12 +38,14 @@ export default defineComponent({
     const currentOperand = ref('');
     const previousOperand = ref('');
     const operation = ref<string | null>(null);
+    const history = ref<string[]>([]);
 
     const clear = () => {
       displayValue.value = '0';
       currentOperand.value = '';
       previousOperand.value = '';
       operation.value = null;
+      history.value = [];
     };
 
     const appendNumber = (number: string) => {
@@ -55,6 +62,7 @@ export default defineComponent({
       operation.value = op;
       previousOperand.value = currentOperand.value;
       currentOperand.value = '';
+      history.value.push(`${previousOperand.value} ${operation.value}`);
     };
 
     const compute = () => {
@@ -82,6 +90,7 @@ export default defineComponent({
       operation.value = null;
       previousOperand.value = '';
       displayValue.value = currentOperand.value;
+      history.value.push(`= ${currentOperand.value}`);
     };
 
     return {
@@ -90,6 +99,7 @@ export default defineComponent({
       appendNumber,
       chooseOperation,
       compute,
+      history,
     };
   },
 });
@@ -113,6 +123,23 @@ export default defineComponent({
   padding: 10px;
   box-sizing: border-box;
   margin-bottom: 10px;
+}
+
+.history {
+  width: 260px;
+  background: #f0f0f0;
+  color: #333;
+  font-size: 1em;
+  text-align: right;
+  padding: 10px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.history-entry {
+  margin-bottom: 5px;
 }
 
 .buttons {
