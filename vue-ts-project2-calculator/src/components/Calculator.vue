@@ -1,15 +1,12 @@
 <template>
   <div class="calculator-container">
     <div class="calculator" @keydown="handleKeydown" tabindex="0">
-      <!-- 显示当前输入或计算结果 -->
       <div class="display">{{ displayValue }}</div>
-      <!-- 显示历史记录 -->
       <div class="history">
         <div v-for="(entry, index) in history" :key="index" class="history-entry">
           {{ entry.expression }} = {{ entry.result }}
         </div>
       </div>
-      <!-- 按钮区域 -->
       <div class="buttons">
         <button @click="clear">C</button>
         <button @click="appendNumber('7')">7</button>
@@ -34,7 +31,6 @@
         <button @click="appendOperation(')')">)</button>
       </div>
     </div>
-    <!-- 备忘录区域 -->
     <div class="memo">
       <h3>Memo</h3>
       <ul>
@@ -50,52 +46,46 @@ import { defineComponent, ref, onMounted } from 'vue';
 export default defineComponent({
   name: 'Calculator',
   setup() {
-    // 定义响应式变量
-    const displayValue = ref('0'); // 显示的值
-    const expression = ref(''); // 当前输入的表达式
-    const history = ref<{ expression: string, result: string }[]>([]); // 历史记录
-    const memo = ref<{ expression: string, result: string }[]>([]); // 备忘录
+    const displayValue = ref('0');
+    const expression = ref('');
+    const history = ref<{ expression: string, result: string }[]>([]);
+    const memo = ref<{ expression: string, result: string }[]>([]);
 
-    // 清除当前输入和显示
     const clear = () => {
       displayValue.value = '0';
       expression.value = '';
     };
 
-    // 添加数字到表达式
     const appendNumber = (number: string) => {
-      // 防止重复添加小数点
       if (number === '.' && expression.value.slice(-1) === '.') return;
       expression.value += number;
       displayValue.value = expression.value;
     };
 
-    // 添加操作符到表达式
     const appendOperation = (op: string) => {
-      // 处理负号
       if (op === '-' && (expression.value === '' || /[\+\-\*\/\(\^√]$/.test(expression.value))) {
         expression.value += '-';
         displayValue.value = expression.value;
         return;
       }
-      // 处理乘号和左括号
       if (op === '(' && /[\d\)]$/.test(expression.value)) {
         expression.value += '*(';
       } else if (op === ')' && /[\+\-\*\/\(\^√]$/.test(expression.value)) {
         return;
       } else if (/[\+\-\*\/\(\^√]$/.test(expression.value) && op !== '(') {
         return;
+      } else if (op === '√') {
+        expression.value += 'Math.sqrt(';
       } else {
         expression.value += op;
       }
       displayValue.value = expression.value;
     };
 
-    // 计算表达式
     const compute = () => {
       try {
-        // 使用 eval 计算表达式，替换 √ 和 ^ 为 JavaScript 可识别的操作
-        const result = eval(expression.value.replace(/√/g, 'Math.sqrt').replace(/\^/g, '**'));
+        // 使用 eval 计算表达式，替换 ^ 为 JavaScript 可识别的操作
+        const result = eval(expression.value.replace(/\^/g, '**'));
         displayValue.value = result.toString();
         // 将表达式和结果添加到历史记录和备忘录
         history.value.push({ expression: expression.value, result: result.toString() });
@@ -107,7 +97,6 @@ export default defineComponent({
       }
     };
 
-    // 处理键盘输入
     const handleKeydown = (event: KeyboardEvent) => {
       const key = event.key;
       if (!isNaN(Number(key))) {
@@ -123,7 +112,6 @@ export default defineComponent({
       }
     };
 
-    // 在组件挂载后自动聚焦到计算器
     onMounted(() => {
       const calculatorElement = document.querySelector('.calculator') as HTMLElement;
       if (calculatorElement) {
